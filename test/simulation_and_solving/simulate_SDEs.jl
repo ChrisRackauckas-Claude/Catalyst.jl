@@ -173,10 +173,15 @@ let
 
     u0_1 = rnd_u0(noise_scaling_network, rng)
     ps_1 = rnd_ps(noise_scaling_network, rng)
-    u0_2 = map_to_vec(u0_1, [:X1, :X2])
-    ps_2 = map_to_vec(ps_1, [:η1, :η2, :p, :k1, :k2, :d])
-
-    @test g_eval(noise_scaling_network, u0_1, ps_1, 0.0) == real_g_3(zeros(2, 4), u0_2, ps_2, 0.0)
+    
+    # Create SDEProblem to get proper u0 and p ordering
+    sprob = SDEProblem(noise_scaling_network, u0_1, (0.0, 1.0), ps_1)
+    
+    # Extract parameters in the expected order for real_g_3
+    p_vec = [sprob.ps[:η1], sprob.ps[:η2], sprob.ps[:p], sprob.ps[:k1], sprob.ps[:k2], sprob.ps[:d]]
+    
+    # Use the actual u0 and p from the problem
+    @test g_eval(noise_scaling_network, u0_1, ps_1, 0.0) == real_g_3(zeros(2, 4), sprob.u0, p_vec, 0.0)
 end
 
 # Tests with multiple noise scaling parameters directly in the macro.
@@ -267,6 +272,10 @@ let
     u0 = [:X1 => 1000.0, :X2 => 1000.0, :X3 => 1000.0]
     ps = [noise_scaling_network.p => 1000.0, noise_scaling_network.d => 1.0, noise_scaling_network.η1 => 1.0]
     sprob = SDEProblem(noise_scaling_network, u0, (0.0, 1000.0), ps)
+
+    # Debug: Check that η2 gets its default value
+    @test sprob.ps[:η2] ≈ 0.1
+    @test sprob.ps[:η1] ≈ 1.0
 
     for repeat in 1:5
         sol = solve(sprob, ImplicitEM(); saveat = 1.0, seed = rand(rng, 1:100))
