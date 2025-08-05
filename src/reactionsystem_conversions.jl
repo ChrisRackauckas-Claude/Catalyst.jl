@@ -406,7 +406,7 @@ function assemble_jumps(rs; combinatoric_ratelaws = true, physical_scales = noth
             affect = Vector{Equation}()
             for (spec, stoich) in rx.netstoich
                 # don't change species that are constant or BCs
-                (!drop_dynamics(spec)) && push!(affect, spec ~ spec + stoich)
+                (!drop_dynamics(spec)) && push!(affect, spec ~ MT.Pre(spec) + stoich)
             end
             if isvrj
                 push!(veqs, VariableRateJump(rl, affect; save_positions))
